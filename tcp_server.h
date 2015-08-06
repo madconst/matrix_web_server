@@ -14,12 +14,12 @@ using namespace std;
 class TCPServer
 {
 private:
-	int sd, port;
+    int sd, port;
 public:
-	TCPServer(const unsigned int port);
-	~TCPServer();
-	void start();
-	SocketStream* accept();
+    TCPServer(const unsigned int port);
+    ~TCPServer();
+    void start();
+    SocketStream* accept();
 };
 
 #endif // TCP_SERVER_H_

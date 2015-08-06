@@ -24,38 +24,38 @@ http_request:
 
 struct HttpRequest
 {
-	string method, uri, version;
-	map<string, string> headers;
+    string method, uri, version;
+    map<string, string> headers;
 };
 
 struct HttpResponse
 {
-	string version, status_code;
-	vector<string> headers;
-	string body;
+    string version, status_code;
+    vector<string> headers;
+    string body;
 };
 
 class HttpConnection
 {
-	SocketStream *socket;
+    SocketStream *socket;
 public:
-	HttpConnection(SocketStream *s);
-	~HttpConnection();
-	HttpRequest getRequest();
-	void sendResponse(HttpResponse& http_response);
-	HttpConnection& operator<<(const string& s);
+    HttpConnection(SocketStream *s);
+    ~HttpConnection();
+    HttpRequest getRequest();
+    void sendResponse(HttpResponse& http_response);
+    HttpConnection& operator<<(const string& s);
 };
 
 class WebServer
 {
-	unsigned int port;
+    unsigned int port;
 
 public:
-	WebServer(unsigned int port_number);
-	void run();
+    WebServer(unsigned int port_number);
+    void run();
 
 private:
-	static void handleClient(HttpConnection *connection);
+    static void handleClient(HttpConnection *connection);
 };
 
 #endif // WEB_SERVER_H_
