@@ -4,6 +4,8 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <cstdlib>
+#include <iostream>
 
 template <typename T>
 class Matrix
@@ -14,26 +16,31 @@ class Matrix
 public:
     Matrix(const unsigned int size) : size(size)
     {
-        std::cout << "Constructing matrix of size " << size << std::endl;
         data = new T*[size];
         for(unsigned int i = 0; i < size; i++) {
             data[i] = new T[size];
             for(unsigned int j = 0; j < size; j++) {
-                data[i][j] = i*size + j; // default values: [0, size*size)
+                data[i][j] = std::rand() % 10;
             }
         }
     }
     Matrix(const Matrix<T>& other) // copy constructor
     {
+    	std::cout << "Copy constructor" << std::endl;
         copyOther(other);
-    }    
+    }
+    Matrix(Matrix<T>&& other) : data(other.data), size(other.size) // move constructor
+    {
+    	std::cout << "Move constructor" << std::endl;
+    	other.data = nullptr;
+    	other.size = 0;
+    }
     ~Matrix()
     {
-        std::cout << "Destructing matrix of size " << size << std::endl;
         clear();
     }
 
-    Matrix<T>& operator= (const Matrix<T>& other)
+    Matrix<T>& operator= (const Matrix<T>& other) // copy assignment
     {
         if(this != &other) {
             clear();
@@ -42,6 +49,46 @@ public:
         return *this;
     }
 
+    Matrix<T>& operator= (Matrix<T>&& other) // move assignment
+    {
+        if(this != &other) {
+            clear();
+            data = other.data;
+            size = other.size;
+            other.data = nullptr;
+            other.size = 0;
+        }
+        return *this;
+    }
+
+    Matrix<T> operator* (const Matrix<T>& b) const
+    {
+        if(this->getSize() != b.getSize()) {
+            throw std::string("Sizes do not match");
+        }
+
+        Matrix<double> a = *this;
+        a.transpose();
+
+        Matrix<double> result(size);
+
+        for(unsigned int i = 0; i < size; i++) {
+            T* result_row = result.getRow(i);
+            for(unsigned int j = 0; j < size; j++) {
+                // multiply A_column and B_row
+                T* a_col = a.getRow(i);
+                T* b_col = b.getRow(j);
+                result_row[j] = 0;
+                for(unsigned k = 0; k < size; k++) {
+                    result_row[j] += a_col[k] * b_col[k];
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /* Simple getters */
     unsigned int getSize() const
     {
         return size;
@@ -58,6 +105,7 @@ public:
         return data[row_index];
     }
 
+    /* Transformations */
     void transpose()
     {
         for(unsigned int i = 0; i < size - 1; i++)
@@ -66,64 +114,102 @@ public:
                 data[i][j] = data[j][i];
                 data[j][i] = temp;
             }
-    }
+    }	
 
-    Matrix<T> getMinorMatrix(const unsigned int row_index, const unsigned int column_index) const
+    Matrix<T> makeMinorMatrix(const unsigned int row_index, const unsigned int column_index) const
     {
-        if(row_index >= size || column_index >= size) {
-            throw std::string("Index out of range");
+        if(row_index >= size) {
+            throw std::string("Row index out of range");
+        }
+        if(column_index >= size) {
+            throw std::string("Column index out of range");
         }
 
-        Matrix<T> minor(size-1);
+        Matrix<T> minor_matrix(size-1);
 
         for(unsigned int i = 0; i < size; ++i)
         {
-            T* row = minor.getRow(i > row_index ? i - 1 : i);
+            T* row;
+            if(i < row_index) {
+                row = minor_matrix.getRow(i);
+            } else if(i == row_index) {
+                continue;
+            } else {
+                row = minor_matrix.getRow(i - 1);
+            }
             for(unsigned int j = 0; j < size; ++j) {
-                row[j > column_index ? j - 1 : j] = data[i][j];
+                if(j < column_index) {
+                    row[j] = data[i][j];
+                } else if(j == column_index) {
+                    continue;
+                } else {
+                    row[j-1] = data[i][j];
+                }
             }
         }
 
-        return minor;
+        return minor_matrix;
     }
 
-    T getDeterminant() const
+    Matrix<T> makeInverse() const
+    {
+        Matrix<T> result(size);
+
+        T det = findDeterminant();
+
+        if(!det) {
+            throw std::string("No inverse exists: matrix determinant equals zero");
+        }
+
+        for(unsigned int i = 0; i < size; ++i) {
+            T* row = result.getRow(i);
+            for(unsigned int j = 0; j < size; ++j) {
+                row[j] = findCofactor(j, i) / det;
+            }
+        }
+
+        return result;
+    }
+
+    /* Calculations */
+    T findMinor(const unsigned int i, const unsigned int j) const
+    {
+        if(i >= size || j >= size) {
+            throw std::string("Index out of range (minor)");
+        }
+
+        return makeMinorMatrix(i, j).findDeterminant();
+    }
+
+    T findCofactor(const unsigned int i, const unsigned int j) const
+    {
+        if((i + j) % 2 == 0) {
+            return this->findMinor(i, j);
+        } else {
+            return -1 * this->findMinor(i, j);
+        }
+    }
+
+    T findDeterminant() const
     {
         if(size == 1) {
             return data[0][0];
         }
 
         T det = 0;
+        unsigned int j = 0;
         for(unsigned int i = 0; i < size; i++) {
-            for(unsigned int j = 0; j < size; j++) {
-                det += this->getCofactor(i, j);
-            }
-        }
-    }
-
-    T getMinor(const unsigned int i, const unsigned int j) const
-    {
-        if(i >= size || j >= size) {
-            throw std::string("Index out of range (minor)");
+            det += data[i][j] * this->findCofactor(i, j);
         }
 
-        return getMinorMatrix(i, j).getDeterminant();
-    }
-
-    T getCofactor(const unsigned int i, const unsigned int j) const
-    {
-        if((i + j) % 2 == 0) {
-            return this->getMinor(i, j);
-        } else {
-            return -this->getMinor(i, j);
-        }
+        return det;
     }
 
     void print() const
     {
         for(unsigned int i = 0; i < size; ++i) {
             for(unsigned int j = 0; j < size; ++j) {
-                std::cout << std::setw(4) << data[i][j];
+                std::cout << std::setprecision(4) << data[i][j] << "\t";
             }
             std::cout << std::endl;
         }

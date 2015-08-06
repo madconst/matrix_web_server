@@ -41,7 +41,7 @@ HttpResponse RequestProcessor::process(const HttpRequest& http_request)
 
     stringstream body;
     body << "<html><body>"
-         << "<h1>Welcome to Matrix Transposer&#8482;</h1>"
+         << "<h1>Welcome to Matrix Processor&#8482;</h1>"
          << "<style>"
          << "input[type='text'] { border: none; } "
          << "table { border-collapse: collapse; } "
@@ -84,8 +84,18 @@ HttpResponse RequestProcessor::process(const HttpRequest& http_request)
             }
         }
 
-        m.transpose();
+        Matrix<double> i = m.makeInverse();
+        Matrix<double> p = m * i;
+
+        body << "<h3>Source matrix</h3>";
         body << printMatrix(m, false); // print values
+
+        body << "<h3>Inverse</h3>";
+        body << printMatrix(i, false);
+
+        body << "<h3>Product</h3>";
+        body << printMatrix(p, false);
+
         body << "<a href='/'>Back</a>";
         
     } else {
@@ -138,7 +148,7 @@ string RequestProcessor::printMatrix(const Matrix<double>& m, bool print_input_f
             if(print_input_fields) {
                 body << "<input type='text' size='5' name='r" << i << "c" << j << "' value='" << row[j] << "'/>";
             } else {
-                body << row[j];
+                body << (row[j] > 1e-7 ? row[j] : 0);
             }
             body << "</td>";
         }

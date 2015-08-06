@@ -32,6 +32,7 @@ string SocketStream::readLine()
     ssize_t len;
     const unsigned int max_size = 4096;
     string line_buffer;
+    line_buffer.reserve(512);
     char byte;
 
     unsigned int bytes_read = 0;
